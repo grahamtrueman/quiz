@@ -1,0 +1,277 @@
+<!--TEMPLATE-->
+<html lang="en">
+<link rel="stylesheet" type="text/css" href="http://intranet.micketts.co.uk/style/intranet.css">
+[[SETENV]]
+
+[[IF ($Xaction eq 'quiz')]]         [[QUIZ]]			[[/IF]]
+[[IF ($Xaction eq 'changer')]]		[[CHANGER]]			[[/IF]]
+[[IF ($Xaction eq '')]]         	[[SETMAINTABLE]]	[[/IF]]
+
+
+
+</html>
+<!--/TEMPLATE-->
+
+<!--SETMAINTABLE-->
+
+        <table cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                        <td class="backpanel" colspan="7">&nbsp;</td>
+                </tr>
+                <tr>
+                        <td class="tophead" width=20>&nbsp;</td>
+                        <td class="tophead" width=240></td>
+                        <td width=20 class="title">&nbsp;</td>
+                        <td width=240 class="title">MY QUIZ</td>
+                        <td width=20 class="title">&nbsp;</td>
+                        <td width=240 class="tophead" valign="bottom" align="right"><span class="listitem"><strong>[[TIMESTAMP]]</strong></span></td>
+                        <td class="tophead" width=20>&nbsp;</td>
+                </tr>
+                <tr>
+                        <td class="backpanel" colspan="7">&nbsp;</td>
+                </tr>
+                <tr>
+                        <td width=20 class="backpanel" rowspan="3">&nbsp;</td>
+                        <td class="innertable" width=240 valign="top" rowspan="3">[[CATEGORIES]]</td>
+                        <td width=20 class="backpanel" rowspan="3">&nbsp;</td>
+                        <td class="innertable" width=240 valign="top">[[MAIN]]</td>
+                        <td width=20 class="backpanel" rowspan="3">&nbsp;</td>
+                        <td class="innertable" width=240 valign="top" rowspan="3">[[TESTBLOCK]]</td>
+                        <td width=20 class="backpanel" rowspan="3">&nbsp;</td>
+                </tr>
+                <tr>
+                        <td class="backpanel">&nbsp;</td>
+                </tr>
+                <tr>
+                        <td class="backpanel" colspan="7">&nbsp;</td>
+                </tr>
+				<tr>
+                        <td class="backpanel" colspan="7">&nbsp;</td>
+                </tr>
+        </table>
+		
+		
+
+<!--/SETMAINTABLE-->
+
+<!--TIMESTAMP-->
+        [[EVAL ( &displayDate(time) )]] [[EVAL ( &displayTime(time,"h:m:s") )]]
+<!--/TIMESTAMP-->
+
+
+<!--TESTBLOCK-->
+	<h2>Leaderboard</h2>
+                [[SQL ~
+                        SELECT id,test.test2
+                                FROM test
+                                ;
+                        ~myId,a1,a2~]]
+                        <font color="red">[[myId]]</font>&nbsp;<font color="blue">[[a1]]</font>&nbsp;<font color="#008080">[[a2]]</font><br />
+                [[/SQL]]
+	<i>Sorry, but this bit ain't ready yet ;)</i>
+<!--/TESTBLOCK-->
+
+<!--CATEGORIES-->
+	<h2>Categories</h2>
+	<ul>
+		[[SQL ~
+			SELECT C.id,C.category,COUNT(Q.id)
+				FROM categories AS C
+				LEFT JOIN questions AS Q
+				ON C.id=Q.catId
+				GROUP BY C.id
+				~cId,cCat,qCount~]]
+		<li><a class="highlightlink" href="main?action=changer~id=[[cId]]">[[cCat]]</a>&nbsp;([[qCount]])</li>
+		[[/SQL]]
+	</ul>		
+
+<!--/CATEGORIES-->
+
+<!--CHANGER-->
+
+	[[SQL ~
+		UPDATE categories
+		SET active=0
+		WHERE active > 0
+		~~]]
+	[[/SQL]]
+	[[SQL ~
+		UPDATE categories
+		SET active=1
+		WHERE id=[[VERYHARD Xid]]
+		~~]]
+	[[/SQL]]
+	[[SQL ~
+		SELECT category
+		FROM categories
+		WHERE id=[[VERYHARD Xid]]
+		~cCat~]]
+	[[/SQL]]
+	Category changed to [[cCat]]
+	<META HTTP-EQUIV="refresh" CONTENT="2; URL=http://quiz.micketts.co.uk/main">
+<!--/CHANGER-->
+
+<!--MAIN-->
+	
+		[[SQL ~
+			SELECT id,category,imageFile,description
+			FROM categories
+			where active=1
+			~cId,cCat,cImg,cDesc~]]
+			
+		[[/SQL]]	
+		<p>
+			<strong>Selected: [[cCat]]</strong>
+			<i>[[cDesc]]</i>
+		</p>
+		[[SQL ~
+			SELECT id
+			FROM categories
+			WHERE active=1
+			~catID~]]
+		[<a href="main?action=quiz~mode=start~catID=[[catID]]">START&nbsp;QUIZ</a>]&nbsp;&nbsp;[<a href="main?action=quiz~mode=answers~catID=[[catID]]">ANSWERS</a>]&nbsp;&nbsp;[<a href="main?action=quiz~mode=reset">RESET</a>]
+		[[/SQL]]	
+			
+<!--/MAIN-->
+
+<!--QUIZ-->
+	[[IF ($Xmode eq 'start')]]			[[STARTQUIZ]]		[[/IF]]
+	[[IF ($Xmode eq 'questions')]]		[[QUESTIONS]]		[[/IF]]
+	[[IF ($Xmode eq 'answers')]]		[[STARTANSWERS]]	[[/IF]]
+	[[IF ($Xmode eq 'tiebreak')]]		[[TIEBREAK]]		[[/IF]]
+<!--/QUIZ-->
+
+<!--STARTQUIZ-->
+	<h1>Starting your quiz</h1>
+	[[SQL ~
+		SELECT count(*) 
+		FROM questions
+		WHERE catId=[[VERYHARD XcatID]]
+		~tq~]]
+	<br>There are a total of [[tq]] questions in this section.
+	[[/SQL]]
+	[[IF ($tq > '0')]]<p>[<a href="main?action=quiz~mode=questions~q=1">QUESTION 1</a>]</p>[[/IF]]
+	[[IF ($tq eq '0')]]<p>No questions available, return to main menu.</p>[[/IF]]
+	
+	<br>	
+	[[RETURNTOMENU]]	
+<!--/STARTQUIZ-->
+
+<!--QUESTIONS-->
+	
+	<h1>Start questions</h1>
+	
+
+	<table border="2">
+		<td>		
+			
+			[[SQL ~
+				SELECT Q.catOrder,Q.question,Q.display,Q.qPlay
+				FROM questions AS Q
+				LEFT JOIN categories AS C
+				ON Q.catId=C.id
+				WHERE C.active=1
+				AND Q.catOrder=[[VERYHARD Xq]]
+				~Qord,Qquest,Qtype,Qplay~]]
+			
+			<tr>
+				<td><font color="#0000ff">Question&nbsp;[[Qord]]: [[Qquest]]</font></td>
+				<td>[[IF ($Xq > 1)]]<em>Previous Questions</em>[[/IF]]</td>
+			</tr>
+		</td>
+		<td>
+			<tr>
+				[[IF ($Qtype eq '1')]]<td><iframe width="800" height="600" src="http://quiz.micketts.co.uk/audio/soundbyte/[[Qplay]]"></iframe></td>[[/IF]]
+				[[IF ($Qtype eq '2')]]<td><img width="800" src="http://quiz.micketts.co.uk/audio/soundbyte/[[Qplay]]"></td>[[/IF]]
+				<td>[[IF ($Xq > 1)]][[OLDQUESTIONS]][[/IF]]</td>
+			</tr>
+		</td>
+			[[/SQL]]		
+	</table>	
+			
+		
+	
+	[[SQL ~
+		SELECT MAX(catOrder),[[VERYHARD Xq]]+1
+		FROM questions AS Q
+		LEFT JOIN categories AS C
+		ON Q.catId=C.id
+		WHERE C.active=1
+		~cq,nq~]]
+	[[/SQL]]	
+	[[IF ($nq <= $cq)]][<a href="main?action=quiz~mode=questions~q=[[nq]]">QUESTION [[nq]]</a>][[/IF]]
+	[[IF ($nq > $cq)]][<a href="main?action=quiz~mode=tiebreak">Tie Breaker</a>][[/IF]]
+	[[RETURNTOMENU]]
+<!--/QUESTIONS-->
+
+<!--OLDQUESTIONS-->
+	<ul>
+	[[SQL ~
+		SELECT Q.catOrder,Q.question
+		FROM questions AS Q
+		LEFT JOIN categories AS C
+		ON Q.catId=C.id
+		WHERE C.active=1
+		AND Q.catOrder<[[VERYHARD Xq]]
+		ORDER BY Q.catOrder ASC
+		~num,q~]]
+		<li><font color="#0000ff">#[[num]]&nbsp;-&nbsp;[[q]]</font></li>
+	[[/SQL]]	
+	</ul>	
+<!--/OLDQUESTIONS-->
+
+<!--STARTANSWERS-->
+	<h1>Show answers</h1>
+	
+	[[IF ($Xans eq '')]][<a href="main?action=quiz~mode=answers~catID=[[VERYHARD XcatID]]~ans=1">QUESTION 1</a>][[/IF]]
+	[[IF ($Xans eq '0')]][<a href="main?action=quiz~mode=answers~catID=[[VERYHARD XcatID]]~ans=1">QUESTION 1</a>][[/IF]]
+	[[IF ($Xans eq '11')]][<a href="main?action=quiz~mode=answers~catID=[[VERYHARD XcatID]]~ans=[[VERYHARD Xans]]">TIEBREAKER</a>][[/IF]]
+	[[IF ($Xans > '0')]]	[[SHOWANSWER]]		[[/IF]]
+	
+	[[RETURNTOMENU]]
+<!--/STARTANSWERS-->
+
+<!--SHOWANSWER-->
+	[[SQL ~
+		SELECT catOrder,question,answer,aPlay,catOrder+1
+		FROM questions
+		WHERE catId='[[VERYHARD XcatID]]'
+		AND catOrder='[[VERYHARD Xans]]'
+		~qId,qQues,qAns,qPlay,qNq~]]
+		<table align="centre">
+			<tr>
+				<td class="toolboxheading">Question:&nbsp;[[qId]]</td>
+				<td>[[qQues]]</td>
+			</tr>
+			<tr>
+				<td colspan="2"><iframe width="800" height="600" src="http://quiz.micketts.co.uk/audio/soundbyte/[[qPlay]]"></iframe></td>
+			</tr>
+			<tr>
+				<tr colspan="2">[[qAns]]</tr>
+			</tr>
+		</table>
+		[<a href="main?action=quiz~mode=answers~catID=[[VERYHARD XcatID]]~ans=[[qNq]]">QUESTION&nbsp;[[qNq]]</a>]
+	[[/SQL]]
+	
+<!--/SHOWANSWER-->
+
+<!--TIEBREAK-->
+    Falling through a hole somewhere.
+	<h1>Nearest to pin - tiebreaker</h1>
+	[[RETURNTOMENU]]
+<!--/TIEBREAK-->
+
+<!--RETURNTOMENU-->
+	<p>
+	<hr>
+	<a href="main">MAIN MENU</a>
+	</p>
+<!--/RETURNTOMENU-->
+
+<!--RESETDB-->
+
+	Database reset
+	<a href="main">RETURN TO MAIN MENU</a>
+<!--/RESETDB-->
+
+
